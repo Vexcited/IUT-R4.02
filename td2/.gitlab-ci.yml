@@ -1,0 +1,35 @@
+stages:
+    - stage_1
+    - stage_2
+
+version:
+    stage: stage_1
+    image: mariadb:10.11.2
+    script: echo "select version()" | mariadb --user=user -ppassword --host=database -D td
+
+count:
+    stage: stage_1
+    image: ubuntu:22.04
+    before_script:
+        - apt update && apt install -y apt-transport-https curl
+        - curl -o /etc/apt/trusted.gpg.d/mariadb_release_signing_key.asc 'https://mariadb.org/mariadb_releas_signing_key.asc'
+        - sh -c "echo 'deb https://mirrors.ircam.fr/pub/mariadb/repo/10.11/ubuntu jammy main' >>/etc/apt/sources.list"
+        - apt-get install -y mariadb-client
+        - cat script.sql | mariadb --user=user -ppassword --host=database -D td
+    script:
+        - echo "select count(*) from test;" | mariadb --user=user -ppassword --host=database -D td
+
+show_tables:
+    stage: stage_2
+    image: mariadb:10.11.2
+    script: echo 'show tables' | mariadb --user=user -ppassword --host=database -D td
+
+services:
+    - name: mariadb:10.11.2
+      alias: database
+      command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci', '--default-authentication-plugin=mysql_native_password']
+      variables:
+          MARIADB_ROOT_PASSWORD: test
+          MARIADB_DATABASE: td
+          MARIADB_USER: user
+          MARIADB_PASSWORD: password
